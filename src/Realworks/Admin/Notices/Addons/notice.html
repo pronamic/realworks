@@ -1,0 +1,23 @@
+<div class="notice tsd-upgrade-notice">
+
+	<div class="inner">
+
+		<div class="banner">
+			<img src="<?= $banner ?>" width="160" height="400" >
+		</div>
+
+		<div class="content">
+			<h2>Makelaar plugin</h2>
+
+			<p><strong>Let op:</strong> Ingrijpende update makelaar plugin</p>
+
+			<p>Bedankt voor het bijwerken van de makelaar plugin. Deze update brengt een belangrijke wijziging met zich mee waar we je graag van op de hoogte brengen. Je kunt vanaf nu binnen de plugin gebruik maken van add-ons. Add-ons die je in het instellingenscherm van de plugin terugvindt zijn allemaal door ons getest/ontwikkeld en volledig compatible met de makelaar module.</p>
+
+			<p>Je vindt de add-ons in het <a href="<?= Realworks::adminUrl('dashboard'); ?>">instellingen-scherm van de plugin</a>. Je komt hier door in het menu aan de linkerzijde op Makelaar te klikken.</p>
+
+			<p><strong>Belangrijk:</strong> ons aanbod add-ons wordt continu uitgebreid en doorontwikkeld. Je doet er dan ook goed aan om het aanbod in de gaten te houden :)</p>
+		</div>
+	</div>
+
+	<a href="<?= esc_url(add_query_arg('dismiss_notice', $this->name())) ?>" class="notice-dismiss"><span class="screen-reader-text">Dismiss this notice.</span></a>
+</div>

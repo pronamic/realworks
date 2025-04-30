@@ -1,0 +1,59 @@
+.menu-icon-realworks_nb_type,
+.menu-icon-realworks_nb_nummer,
+.menu-icon-realworks_vgm_type,
+.menu-icon-realworks_vgm_nummer {
+	font-size: 13px !important;
+}
+
+body:not(.folded):not(.auto-fold) .menu-icon-realworks_nb_type .wp-menu-image,
+body:not(.folded):not(.auto-fold) .menu-icon-realworks_nb_nummer .wp-menu-image,
+body:not(.folded):not(.auto-fold) .menu-icon-realworks_vgm_type .wp-menu-image,
+body:not(.folded):not(.auto-fold) .menu-icon-realworks_vgm_nummer .wp-menu-image {
+	-moz-transform: scaleY(-1) scale(0.7);
+	-o-transform: scaleY(-1) scale(0.7);
+	-webkit-transform: scaleY(-1) scale(0.7);
+	transform: scaleY(-1) scale(0.7);
+	filter: FlipV;
+	-ms-filter: 'FlipV';
+}
+
+body:not(.folded):not(.auto-fold) .menu-icon-realworks_nb_type .wp-menu-image,
+body:not(.folded):not(.auto-fold) .menu-icon-realworks_vgm_type .wp-menu-image {
+	margin-left: 10px !important;
+}
+
+body:not(.folded):not(.auto-fold) .menu-icon-realworks_nb_nummer .wp-menu-image,
+body:not(.folded):not(.auto-fold) .menu-icon-realworks_vgm_nummer .wp-menu-image {
+	margin-left: 20px !important;
+}
+
+body.folded .menu-icon-realworks_nb_type .wp-menu-image::before,
+body.auto-fold .menu-icon-realworks_nb_type .wp-menu-image::before,
+body.folded .menu-icon-realworks_nb_nummer .wp-menu-image::before,
+body.auto-fold .menu-icon-realworks_nb_nummer .wp-menu-image::before,
+body.folded .menu-icon-realworks_vgm_type .wp-menu-image::before,
+body.auto-fold .menu-icon-realworks_vgm_type .wp-menu-image::before,
+body.folded .menu-icon-realworks_vgm_nummer .wp-menu-image::before,
+body.auto-fold .menu-icon-realworks_vgm_nummer .wp-menu-image::before {
+	content: "\f102";
+}
+
+body.folded .menu-icon-realworks_nb_type .wp-menu-image,
+body.auto-fold .menu-icon-realworks_nb_type .wp-menu-image,
+body.folded .menu-icon-realworks_vgm_type .wp-menu-image,
+body.auto-fold .menu-icon-realworks_vgm_type .wp-menu-image {
+	-moz-transform: scale(0.85);
+	-o-transform: scale(0.85);
+	-webkit-transform: scale(0.85);
+	transform: scale(0.85);
+}
+
+body.folded .menu-icon-realworks_nb_nummer .wp-menu-image,
+body.auto-fold .menu-icon-realworks_nb_nummer .wp-menu-image,
+body.folded .menu-icon-realworks_vgm_nummer .wp-menu-image,
+body.auto-fold .menu-icon-realworks_vgm_nummer .wp-menu-image {
+	-moz-transform: scale(0.7);
+	-o-transform: scale(0.7);
+	-webkit-transform: scale(0.7);
+	transform: scale(0.7);
+}

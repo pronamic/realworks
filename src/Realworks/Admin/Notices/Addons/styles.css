@@ -1,0 +1,29 @@
+.tsd-upgrade-notice {
+	/* begin copy of native is-dismissible style */
+	padding-right: 38px;
+	position: relative;
+	/* end copy of native is-dismissible style */
+}
+
+.tsd-upgrade-notice .inner {
+	display: flex;
+}
+
+.tsd-upgrade-notice .banner {
+	padding: 20px 40px 20px 10px;
+}
+
+.tsd-upgrade-notice .content {
+	max-width: 710px;
+	align-self: center;
+}
+
+.tsd-upgrade-notice p {
+	font-size: 14px;
+	line-height: 2.0;
+	margin-bottom: 15px;
+}
+
+.tsd-upgrade-notice .notice-dismiss {
+	text-decoration: none;
+}
