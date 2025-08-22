@@ -17,6 +17,7 @@ class AdminServiceProvider extends BaseServiceProvider
 	public function registerPages()
 	{
 		$this->registerPage(new Pages\MainPage);
+		$this->registerPage(new Pages\ApiSettingsPage);
 	}
 
 	protected function registerAddons()

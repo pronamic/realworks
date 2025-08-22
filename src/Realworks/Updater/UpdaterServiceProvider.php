@@ -1,5 +1,7 @@
 <?php namespace Realworks\Updater;
 
+use Realworks\Admin\Pages;
+use Realworks\Updater\RealworksApiClient;
 use CustomPost\Plugin\Updater\Pull\PullServiceProvider;
 use CustomPost\Plugin\Updater\Batch\UpdaterServiceProvider as BaseServiceProvider;
 
@@ -20,7 +22,9 @@ class UpdaterServiceProvider extends BaseServiceProvider
 		{
 			list($entity, $settings) = $parameters;
 
-			$source = new RealworksApiSource($app['remote']);
+			$apiKey = get_option(Pages\ApiSettingsPage::OPTION_NAME, '');
+			$apiClient = new RealworksApiClient($apiKey);
+			$source = new RealworksApiSource($app['remote'], $apiClient);
 
 			return $source
 				->setKoppeling(array_get($settings, 'koppeling'))

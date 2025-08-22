@@ -1,190 +1,168 @@
 <?php namespace Realworks\Updater;
 
+use SimpleXMLElement;
+use ZipArchive;
 use RuntimeException;
-use JoostK\Wordpress\Remote\Response;
 use JoostK\Wordpress\Remote\RemoteInterface;
 use CustomPost\Plugin\Updater\ApiSourceInterface;
-use CustomPost\Plugin\Updater\UpdateNotAllowedException;
 
 class RealworksApiSource implements ApiSourceInterface
 {
-	const DEFAULT_KOPPELING = 'WEBSITE';
-	const URL = 'https://xml-publish.realworks.nl/servlets/ogexport';
+    protected $remote;
+    protected $apiClient;
+    protected $path;
 
-	protected $remote;
+    public function __construct(RemoteInterface $remote, RealworksApiClient $apiClient)
+    {
+        $this->remote = $remote;
+        $this->apiClient = $apiClient;
+    }
 
-	protected $koppeling = self::DEFAULT_KOPPELING;
+    public function setIdentifier($identifier)
+    {
+        return $this;
+    }
 
-	protected $user;
+    public function setPath($path)
+    {
+        $this->path = $path . '/archive.zip';
+        return $this;
+    }
 
-	protected $password;
+    public function setCredentials($user, $password)
+    {
+        return $this;
+    }
 
-	protected $offices;
+    public function setOffices($offices)
+    {
+        return $this;
+    }
 
-	protected $identifier;
+    public function setKoppeling($koppeling)
+    {
+        return $this;
+    }
 
-	protected $path;
+    public function getArchivePath()
+    {
+        $data = $this->apiClient->fetchObjects();
 
-	public function __construct(RemoteInterface $remote)
-	{
-		$this->remote = $remote;
-	}
+        if (empty($data['resultaten'])) {
+            $this->createEmptyZip();
+            return $this->path;
+        }
 
-	public function setIdentifier($identifier)
-	{
-		$this->identifier = $identifier;
+        $xmlString = $this->convertJsonToXml($data['resultaten']);
+        $this->createZipWithXml($xmlString);
 
-		return $this;
-	}
+        return $this->path;
+    }
 
-	public function setPath($path)
-	{
-		$this->path = $path.'/archive.zip';
+    protected function createZipWithXml($xmlString)
+    {
+        $zip = new ZipArchive();
+        if ($zip->open($this->path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== TRUE) {
+            throw new RuntimeException("Cannot open <{$this->path}>");
+        }
+        $zip->addFromString('export.xml', $xmlString);
+        $zip->close();
+    }
 
-		return $this;
-	}
+    protected function createEmptyZip()
+    {
+        $zip = new ZipArchive();
+        $zip->open($this->path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $zip->close();
+    }
 
-	public function setCredentials($user, $password)
-	{
-		$this->user = $user;
-		$this->password = $password;
+    protected function convertJsonToXml(array $objects)
+    {
+        $xml = new SimpleXMLElement('<Wonen></Wonen>');
+        foreach ($objects as $object) {
+            $this->convertObjectToXml($xml, $object);
+        }
+        return $xml->asXML();
+    }
 
-		return $this;
-	}
+    protected function convertObjectToXml(SimpleXMLElement $xml, array $object)
+    {
+        $objectNode = $xml->addChild('Object');
 
-	public function setOffices($offices)
-	{
-		$this->offices = str_replace(' ', '', $offices);
+        // --- Helper function to safely access array keys ---
+        $get = function($array, $key, $default = '') {
+            $keys = explode('.', $key);
+            foreach ($keys as $k) {
+                if (!isset($array[$k])) {
+                    return $default;
+                }
+                $array = $array[$k];
+            }
+            return $array;
+        };
 
-		return $this;
-	}
+        // --- Map data based on fields.php ---
+        $objectNode->addChild('ObjectSystemID', $get($object, 'id'));
+        $objectNode->addChild('ObjectTiaraID', $get($object, 'tiaraId'));
 
-	public function setKoppeling($koppeling)
-	{
-		$this->koppeling = $koppeling ?: static::DEFAULT_KOPPELING;
+        $detailsNode = $objectNode->addChild('ObjectDetails');
 
-		return $this;
-	}
+        // Address
+        $adresNode = $detailsNode->addChild('Adres');
+        $nederlandsNode = $adresNode->addChild('Nederlands');
+        $nederlandsNode->addChild('Straatnaam', $get($object, 'adres.straat'));
+        $nederlandsNode->addChild('Huisnummer', $get($object, 'adres.huisnummer'));
+        $nederlandsNode->addChild('HuisnummerToevoeging', $get($object, 'adres.huisnummerToevoeging'));
+        $nederlandsNode->addChild('Postcode', $get($object, 'adres.postcode'));
+        $nederlandsNode->addChild('Woonplaats', $get($object, 'adres.plaats'));
 
-	public function getArchivePath()
-	{
-		if ( ! $this->hasExistingArchive())
-		{
-			if ( ! $this->isUpdateAllowed())
-			{
-				throw new UpdateNotAllowedException('Realworks staat het niet toe om bij te werken voor 8:30.');
-			}
+        // Price
+        $koopNode = $detailsNode->addChild('Koop');
+        $koopNode->addChild('Koopprijs', $get($object, 'prijs.koopPrijs'));
+        $koopNode->addChild('KoopConditie', $get($object, 'prijs.koopConditie'));
 
-			$this->downloadArchive();
-		}
+        $huurNode = $detailsNode->addChild('Huur');
+        $huurNode->addChild('Huurprijs', $get($object, 'prijs.huurPrijs'));
+        $huurNode->addChild('HuurConditie', $get($object, 'prijs.huurConditie'));
 
-		return $this->path;
-	}
+        // Status
+        $statusNode = $detailsNode->addChild('StatusBeschikbaarheid');
+        $statusNode->addChild('Status', $get($object, 'status'));
 
-	public function downloadArchive()
-	{
-		$response = $this->requestArchive();
+        // Dates
+        $detailsNode->addChild('DatumInvoer', $get($object, 'datumAanmelding'));
+        $detailsNode->addChild('DatumWijziging', $get($object, 'datumWijziging'));
 
-		if ( ! $response->isOk())
-		{
-			return $this->failWithRealworksResponse($response);
-		}
+        // Description
+        $detailsNode->addChild('Aanbiedingstekst', $get($object, 'aanbiedingstekst'));
 
-		if ($response->getBody())
-		{
-			$this->writeData($response->getBody());
-		}
-	}
+        // --- Wonen Details ---
+        $wonenDetailsNode = $objectNode->addChild('Wonen')->addChild('WonenDetails');
 
-	protected function requestArchive()
-	{
-		try
-		{
-			return $this->remote->get($this->getDownloadUrl(), array(
-				'timeout.connection' => 300,
-				'stream' => true,
-				'filename' => $this->path,
-			));
-		}
-		catch (RuntimeException $e)
-		{
-			$this->readAndDeleteFailedArchive();
+        $bestemmingNode = $wonenDetailsNode->addChild('Bestemming');
+        $bestemmingNode->addChild('HuidigGebruik', $get($object, 'huidigGebruik'));
 
-			return $this->remote->get($this->getDownloadUrl(), array(
-				'timeout.connection' => 300,
-			));
-		}
-	}
+        $matenNode = $wonenDetailsNode->addChild('MatenEnLigging');
+        $matenNode->addChild('Inhoud', $get($object, 'inhoud'));
+        $matenNode->addChild('GebruiksoppervlakteWoonfunctie', $get($object, 'oppervlakten.woonoppervlakte'));
+        $matenNode->addChild('PerceelOppervlakte', $get($object, 'perceelOppervlakte'));
 
-	protected function failWithRealworksResponse(Response $response)
-	{
-		$body = $response->getBody() ?: $this->readAndDeleteFailedArchive();
+        $bouwjaarNode = $wonenDetailsNode->addChild('Bouwjaar');
+        $bouwjaarNode->addChild('JaarOmschrijving')->addChild('Jaar', $get($object, 'bouwjaar'));
 
-		preg_match('~<h1>(.*?)</h1>~', $body, $matches);
+        // Media
+        $mediaLijstNode = $objectNode->addChild('MediaLijst');
+        if (!empty($object['media']) && is_array($object['media'])) {
+            foreach ($object['media'] as $mediaItem) {
+                $mediaNode = $mediaLijstNode->addChild('Media');
+                $mediaNode->addChild('Groep', $get($mediaItem, 'categorie'));
+                $mediaNode->addChild('URL', $get($mediaItem, 'link'));
+            }
+        }
+    }
 
-		$message = isset($matches[1]) ? $matches[1] : 'HTTP Status ' . $response->getStatus();
-
-		throw new RuntimeException("Realworks gaf een foutmelding tijdens het downloaden van data:\n{$message}\n\nURL: {$this->getDownloadUrl()}");
-	}
-
-	protected function readAndDeleteFailedArchive()
-	{
-		if (file_exists($this->path))
-		{
-			$body = file_get_contents($this->path);
-
-			unlink($this->path);
-
-			return $body;
-		}
-	}
-
-	protected function writeData($data)
-	{
-		if (file_put_contents($this->path, $data) === false)
-		{
-			throw new RuntimeException("Gedownloade data kon niet worden opgeslagen in [{$this->path}]");
-		}
-	}
-
-	protected function getDownloadUrl()
-	{
-		$query = array_filter(array(
-			'koppeling' => $this->koppeling,
-			'versie' => $this->getFeedVersion(),
-			'og' => strtoupper($this->identifier),
-			'user' => $this->user,
-			'password' => $this->password,
-			'kantoor' => $this->offices,
-		));
-
-		return static::URL . '?' . http_build_query($query);
-	}
-
-	protected function getFeedVersion()
-	{
-		switch ($this->identifier)
-		{
-			case 'bog': return 20;
-		}
-	}
-
-	protected function hasExistingArchive()
-	{
-		return file_exists($this->path);
-	}
-
-	protected function isUpdateAllowed()
-	{
-		$time = $this->time();
-		$hour = intval(date('H', $time));
-		$minute = intval(date('i', $time));
-
-		return $hour >= 9 or ($hour === 8 and $minute >= 30);
-	}
-
-	protected function time()
-	{
-		return current_time('timestamp');
-	}
+    public function downloadArchive()
+    {
+        // No-op
+    }
 }
